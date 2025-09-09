@@ -1,15 +1,42 @@
 <?php
 // SMTP2GO Email Handler for Wanaka FC Contact Forms
-// Configure your SMTP2GO credentials below
+// Uses environment variables for SMTP2GO credentials
 
-// SMTP2GO Configuration - REPLACE WITH YOUR ACTUAL CREDENTIALS
-$smtp_host = 'mail.smtp2go.com';           // e.g., 'mail.smtp2go.com'
-$smtp_port = 2525;                           // Usually 587 for TLS or 465 for SSL
-$smtp_username = 'WAFCwebsite';   // Your SMTP2GO username
-$smtp_password = 'lAXsmzL9n7znqAvi';   // Your SMTP2GO password
-$system_from_email = 'YOUR_FROM_EMAIL';            // e.g., 'noreply@wanakafootball.nz'
+// SMTP2GO Configuration from Environment Variables
+$smtp_host = getenv('SMTP2GO_HOST') ?: $_ENV['SMTP2GO_HOST'] ?? 'mail.smtp2go.com';
+$smtp_port = getenv('SMTP2GO_PORT') ?: $_ENV['SMTP2GO_PORT'] ?? '587';
+$smtp_username = getenv('SMTP2GO_USERNAME') ?: $_ENV['SMTP2GO_USERNAME'] ?? '';
+$smtp_password = getenv('SMTP2GO_PASSWORD') ?: $_ENV['SMTP2GO_PASSWORD'] ?? '';
+$system_from_email = getenv('SMTP2GO_FROM_EMAIL') ?: $_ENV['SMTP2GO_FROM_EMAIL'] ?? '';
 $from_name = 'Wanaka FC Website';
 $to_email = 'info@wanakafootball.nz';
+
+// Validate that all required environment variables are set
+$required_env_vars = [
+    'SMTP2GO_HOST' => $smtp_host,
+    'SMTP2GO_PORT' => $smtp_port,
+    'SMTP2GO_USERNAME' => $smtp_username,
+    'SMTP2GO_PASSWORD' => $smtp_password,
+    'SMTP2GO_FROM_EMAIL' => $system_from_email
+];
+
+$missing_vars = [];
+foreach ($required_env_vars as $var_name => $var_value) {
+    if (empty($var_value)) {
+        $missing_vars[] = $var_name;
+    }
+}
+
+if (!empty($missing_vars)) {
+    error_log("SMTP2GO Configuration Error: Missing environment variables: " . implode(', ', $missing_vars));
+    http_response_code(500);
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Email service configuration error. Please contact the administrator.'
+    ]);
+    exit;
+}
 
 // Set content type to JSON
 header('Content-Type: application/json');
@@ -67,12 +94,6 @@ if (strlen($message) < 10 || strlen($message) > 1000) {
     exit;
 }
 
-// Check if SMTP credentials are configured
-if ($smtp_host === 'YOUR_SMTP2GO_HOST' || $smtp_username === 'YOUR_SMTP2GO_USERNAME') {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Email service not configured. Please contact the administrator.']);
-    exit;
-}
 
 // Create email content
 $subject = "New Contact Form Submission from Wanaka FC Website - $page";
